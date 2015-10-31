@@ -1,0 +1,12 @@
+server {
+  listen 80;
+
+  root /opt/srv-cgi;
+
+  location ~ ^/[0-9a-z_-]+.cgi$ {
+    root /opt/srv-cgi/;
+    include /etc/nginx/fcgiwrap.conf;
+    allow all;
+    gzip off;
+  }
+}

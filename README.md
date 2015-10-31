@@ -3,47 +3,64 @@ two scripts, that serve ffmap-backend to access alfred and batman data
 
 #Install
 
+#####\#Install the needed tools to serve via http
+
+    apt-get install fcgiwrap nginx apt-get install alfred-json
+
+#####\#clone repository
     cd ~/
     git clone https://github.com/rubo77/ffmap-backend-bridge
-    cd ffmap-backend-bridge/srv-cgi/
+
 
 #####\#adapt to your community for example for `ffnord`:
     
+    cd ffmap-backend-bridge/srv-cgi/
     for i in *; do sed -i s/ffki/ffnord/g $i; done
 
 #####\#copy cgi files into /opt/srv-cgi/:
     
     cp -a ../srv-cgi/ /opt
 
-#####\#Install the needed tools to serve via http
-
-```
-apt-get install fcgiwrap nginx
 
 #####\#configure nginx
 
-cp /usr/share/doc/fcgiwrap/examples/nginx.conf /etc/nginx/fcgiwrap.conf
-cd /etc/nginx/sites-available/
-cat > /etc/nginx/sites-available/ffmap-backend <<EOF
-server {
-  listen 80;
-
-  root /var/www;
-
-  location ~ ^/[0-9a-z_-]+.cgi$ {
-    root /opt/srv-cgi/;
-    include /etc/nginx/fcgiwrap.conf;
-    allow all;
-    gzip off;
-  }
-}
-EOF
-cd ../sites-enabled/
+```
+cd - # back to this git repository
+cp etc/nginx/sites-available/ffmap-backend /etc/nginx/sites-available/
+cd /etc/nginx/sites-enabled/
 ln -s ../sites-available/ffmap-backend .
 rm /etc/nginx/sites-enabled/default
 /etc/init.d/fcgiwrap restart
 /etc/init.d/nginx restart
 ```
+
+
+# on the service mashine:
+```
+cd /opt/
+git clone git://git.freifunk.in-kiel.de/ffmap-backend
+\# adapt to your site, in this example '89.163.225.200'
+sed s/vpn0.freifunk.in-kiel.de/89.163.225.200/g /opt/ffmap-backend/mkmap.sh -i
+
+mkdir /opt/ffmap-backend/json
+
+cd /etc/cron.d
+ln -s /opt/ffmap-backend/crontab ffmap-backend
+chmod +x /opt/ffmap-backend/crontab
+```
+
+######\# allow port 80
+```
+cat > /etc/iptables.d/600-Allow-HTTP <<EOF
+# Allow ssh on wan and mesh
+ip46tables -A wan-input -p tcp -m tcp --dport 80    -j ACCEPT
+ip46tables -A mesh-input -p tcp -m tcp --dport 80    -j ACCEPT
+EOF
+build-firewall
+#give SGID (Set Group ID up on execution) rights to alfred-json
+chmod u+s /usr/bin/alfred-json
+```
+
 # open problem:
-    
-    Restarting nginx: nginx: [emerg] location "/cgi-bin/" is outside location "^/[0-9a-z_-]+.cgi$" in /etc/nginx/fcgiwrap.conf:3
+
+* alfred output is empty
